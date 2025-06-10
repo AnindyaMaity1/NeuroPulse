@@ -73,6 +73,5 @@ def text_to_speech_with_elevenlabs(input_text, output_filepath):
 
 # === Entry point for direct testing ===
 if __name__ == "__main__":
-    input_text = "Hi this is AI with Hassan"
     text_to_speech_with_gtts_old(input_text, "gtts_testing.mp3")
     text_to_speech_with_elevenlabs_old(input_text, "eleven_testing.mp3")
