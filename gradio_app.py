@@ -16,13 +16,14 @@ If you make a differential, suggest some remedies for them. Do not add any numbe
 your response. Your response should be in one long paragraph. Also always answer as if you are answering to a real person.
 Do not say 'In the image I see' but say 'With what I see, I think you have ....'
 Don't respond as an AI model in markdown. Your answer should mimic that of an actual doctor, not an AI bot. 
-Keep your answer concise (max 5 sentences). No preamble, start your answer right away please."""
+Keep your answer concise (max 2 sentences). No preamble, start your answer right away please."""
 
 # Core logic for processing inputs
 def process_inputs(audio_filepath, image_filepath):
     if not audio_filepath:
         return "No audio received.", "", None
 
+    # Transcribe speech
     try:
         speech_to_text_output = transcribe_with_groq(
             GROQ_API_KEY=os.environ.get("GROQ_API_KEY"),
@@ -32,6 +33,7 @@ def process_inputs(audio_filepath, image_filepath):
     except Exception as e:
         return f"Error transcribing audio: {e}", "", None
 
+    # Analyze image with Gemini if provided
     if image_filepath:
         try:
             query = system_prompt + " " + speech_to_text_output
@@ -41,6 +43,7 @@ def process_inputs(audio_filepath, image_filepath):
     else:
         doctor_response = "No image provided for me to analyze."
 
+    # Convert doctor's response to speech
     try:
         output_audio_path = "final.mp3"
         text_to_speech_with_elevenlabs(
@@ -59,15 +62,16 @@ iface = gr.Interface(
         gr.Image(type="filepath", label="Upload image of affected area")
     ],
     outputs=[
-        gr.Textbox(label="📝 Transcribed"),
-        gr.Textbox(label="🧑‍⚕️ Doctor's Response"),
-        # gr.Audio(label="Voice of the Doctor", type="filepath")
-    ],
+    gr.Textbox(label="📝 Transcribed"),
+    gr.Textbox(label="🧑‍⚕️ Doctor's Response"),
+    # gr.Audio(label="Voice of the Doctor", type="filepath")  # ✅ FIXED
+],
+
     title="NeuroPulse",
     description="Speak your symptoms in English and upload a photo."
 )
 
-# Launch Gradio app with Render-friendly config
+# Launch Gradio app
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 7860))
     iface.launch(server_name="0.0.0.0", server_port=port)
