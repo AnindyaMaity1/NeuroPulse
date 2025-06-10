@@ -13,3 +13,4 @@ pydantic
 requests
 google-generativeai==0.8.4
 SpeechRecognition==3.14.1
+groq==0.26.0
