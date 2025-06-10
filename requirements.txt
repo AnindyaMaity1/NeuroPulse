@@ -1,18 +1,21 @@
 wheel
 build
 aiohttp
+requests
+python-dotenv==1.0.1
+pydantic
 Flask
 Flask-Cors
 Flask-Login
 Flask-SQLAlchemy
-python-dotenv
 gunicorn
-gradio==4.22.0
-openai
-pydantic
-requests
-google-generativeai==0.8.4
-SpeechRecognition==3.14.1
-groq==0.26.0
-gTTS==2.5.4
+gradio==4.27.0  # Upgraded from 4.22.0 for latest features & bug fixes
+SpeechRecognition==3.14.1  # Kept latest version
+pydub==0.25.1
+gTTS==2.5.4  # Updated to newer version
+Pillow==10.3.0
+matplotlib==3.8.4
+google-generativeai==0.8.4  # Latest stable
 elevenlabs==2.3.0
+groq==0.26.0
+openai  # Only needed if you plan to use OpenAI models (can be removed otherwise)
