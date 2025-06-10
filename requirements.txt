@@ -11,3 +11,4 @@ gradio==4.22.0
 openai
 pydantic
 requests
+google-generativeai==0.8.4
