@@ -23,7 +23,6 @@ def process_inputs(audio_filepath, image_filepath):
     if not audio_filepath:
         return "No audio received.", "", None
 
-    # Transcribe speech
     try:
         speech_to_text_output = transcribe_with_groq(
             GROQ_API_KEY=os.environ.get("GROQ_API_KEY"),
@@ -33,7 +32,6 @@ def process_inputs(audio_filepath, image_filepath):
     except Exception as e:
         return f"Error transcribing audio: {e}", "", None
 
-    # Analyze image with Gemini if provided
     if image_filepath:
         try:
             query = system_prompt + " " + speech_to_text_output
@@ -43,7 +41,6 @@ def process_inputs(audio_filepath, image_filepath):
     else:
         doctor_response = "No image provided for me to analyze."
 
-    # Convert doctor's response to speech
     try:
         output_audio_path = "final.mp3"
         text_to_speech_with_elevenlabs(
@@ -62,15 +59,15 @@ iface = gr.Interface(
         gr.Image(type="filepath", label="Upload image of affected area")
     ],
     outputs=[
-    gr.Textbox(label="📝 Transcribed"),
-    gr.Textbox(label="🧑‍⚕️ Doctor's Response"),
-    # gr.Audio(label="Voice of the Doctor", type="filepath")  # ✅ FIXED
-],
-
+        gr.Textbox(label="📝 Transcribed"),
+        gr.Textbox(label="🧑‍⚕️ Doctor's Response"),
+        # gr.Audio(label="Voice of the Doctor", type="filepath")
+    ],
     title="NeuroPulse",
     description="Speak your symptoms in English and upload a photo."
 )
 
-# Launch Gradio app
+# Launch Gradio app with Render-friendly config
 if __name__ == "__main__":
-    gr.Interface(...).launch(server_name="0.0.0.0", server_port=8080)
+    port = int(os.environ.get("PORT", 7860))
+    iface.launch(server_name="0.0.0.0", server_port=port)
