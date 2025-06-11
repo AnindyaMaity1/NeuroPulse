@@ -6,41 +6,40 @@ import google.generativeai as genai
 # Load environment variables
 load_dotenv()
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-1.5-flash")  # Default model is flash
 
 # Configure Gemini
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
 else:
-    raise ValueError("Missing GOOGLE_API_KEY in environment variables.")
+    raise ValueError("❌ Missing GOOGLE_API_KEY in environment variables.")
 
-# Load image using PIL
+# === Load Image using PIL ===
 def load_image(image_path):
     try:
         return Image.open(image_path)
     except FileNotFoundError:
-        raise FileNotFoundError(f"Image not found at path: {image_path}")
+        raise FileNotFoundError(f"🖼️ Image not found at: {image_path}")
     except Exception as e:
-        raise Exception(f"Error loading image: {e}")
+        raise Exception(f"🔍 Error loading image: {e}")
 
-# Analyze image with Gemini 1.5 Flash (or Pro)
+# === Analyze Image with Gemini ===
 def analyze_image_with_gemini(query, image_path):
-    model = genai.GenerativeModel("gemini-1.5-flash")
-
     try:
         image = load_image(image_path)
+        model = genai.GenerativeModel(GEMINI_MODEL)
 
-        response = model.generate_content(
-            [query, image],
-            stream=False
-        )
+        response = model.generate_content([query, image], stream=False)
 
-        return response.text.strip() if response.text else "No response received."
+        if response and response.text:
+            return response.text.strip()
+        else:
+            return "🤖 Gemini returned no meaningful response."
     except Exception as e:
-        return f"Error during analysis: {e}"
+        return f"❌ Error during analysis: {e}"
 
-# # Test locally
+# === Optional: Local Test ===
 # if __name__ == "__main__":
-#     query = "Is there something wrong with my face?"
-#     image_path = "acne.jpg"
-#     result = analyze_image_with_gemini(query, image_path)
-#     print("Doctor's Analysis:", result)
+#     query = "Is there something wrong with this skin condition?"
+#     image_path = "example_skin.jpg"
+#     print(analyze_image_with_gemini(query, image_path))
