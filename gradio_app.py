@@ -8,69 +8,89 @@ from voice_of_the_doctor import text_to_speech_with_elevenlabs
 
 # Load environment variables
 load_dotenv()
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 # System prompt for the doctor
-system_prompt = """You have to act as a professional doctor, I know you are not but this is for learning purposes. 
-What's in this image? Do you find anything wrong with it medically? 
-If you make a differential, suggest some remedies for them. Do not add any numbers or special characters in 
-your response. Your response should be in one long paragraph. Also always answer as if you are answering to a real person.
-Do not say 'In the image I see' but say 'With what I see, I think you have ....'
-Don't respond as an AI model in markdown. Your answer should mimic that of an actual doctor, not an AI bot. 
-Keep your answer concise (max 2 sentences). No preamble, start your answer right away please."""
+system_prompt = """
+You are a professional doctor. Given a patient's symptoms (via audio) and an optional image of the affected area, provide a clinical response including diagnosis and advice. Respond with empathy and clarity. Avoid unnecessary filler.
+"""
 
+# === Core Processing Function ===
 def process_inputs(audio_filepath, image_filepath):
-    print("Received audio:", audio_filepath)
-    print("Received image:", image_filepath)
+    print("Audio path received:", audio_filepath)
+    print("Image path received:", image_filepath)
+
+    transcript = ""
+    doctor_response = ""
+    output_audio_path = None
 
     if not audio_filepath:
-        return "No audio received.", "", None
+        return "No audio received.", "Please provide an audio input.", None
 
     try:
-        speech_to_text_output = transcribe_with_groq(
-            GROQ_API_KEY=os.environ.get("GROQ_API_KEY"),
+        # Transcribe audio using Groq
+        transcript = transcribe_with_groq(
+            GROQ_API_KEY=GROQ_API_KEY,
             audio_filepath=audio_filepath,
             stt_model="whisper-large-v3"
         )
-        print("Transcription:", speech_to_text_output)
     except Exception as e:
-        return f"Error transcribing audio: {e}", "", None
-
-    if image_filepath:
-        try:
-            query = system_prompt + " " + speech_to_text_output
-            doctor_response = analyze_image_with_gemini(query, image_filepath)
-        except Exception as e:
-            doctor_response = f"Error analyzing image: {e}"
-    else:
-        doctor_response = "No image provided for me to analyze."
-
-    print("Doctor Response:", doctor_response)
+        return "Transcription failed.", f"Error: {e}", None
 
     try:
-        output_audio_path = "final.mp3"
-        text_to_speech_with_elevenlabs(
-            input_text=doctor_response,
-            output_filepath=output_audio_path
-        )
-        return speech_to_text_output, doctor_response, output_audio_path
+        # Analyze image (if provided)
+        if image_filepath:
+            full_query = f"{system_prompt}\n{transcript}"
+            doctor_response = analyze_image_with_gemini(full_query, image_filepath)
+        else:
+            doctor_response = "No image provided. Diagnosis based on symptoms only:\n\n" + transcript
     except Exception as e:
-        return speech_to_text_output, doctor_response, None
+        doctor_response = f"Image analysis failed. Proceeding with audio only. Error: {e}"
 
-iface = gr.Interface(
-    fn=process_inputs,
-    inputs=[
-        gr.Audio(sources=["microphone"], type="filepath", label="🎤 Speak your symptoms"),
-        gr.Image(type="filepath", label="🖼️ Upload image of affected area")
-    ],
-    outputs=[
-        gr.Textbox(label="📝 Transcribed"),
-        gr.Textbox(label="🧑‍⚕️ Doctor's Response"),
-        gr.Audio(label="🔊 Voice of the Doctor", type="filepath")  # ✅ UNCOMMENTED
-    ],
-    title="🧠 NeuroPulse",
-    description="Speak your symptoms and upload an image. Our AI doctor gives you a brief voice & text diagnosis."
-)
+    try:
+        # Convert doctor's response to speech
+        output_audio_path = "final_response.mp3"
+        text_to_speech_with_elevenlabs(doctor_response, output_audio_path)
+    except Exception as e:
+        doctor_response += f"\n\n(Note: Voice generation failed: {e})"
+        output_audio_path = None
 
+    return transcript, doctor_response, output_audio_path
+
+# === Gradio UI ===
+with gr.Blocks(theme=gr.themes.Soft()) as iface:
+    gr.Markdown("## 🧠 AI Health Companion")
+    gr.Markdown("Speak your symptoms and optionally upload an image of the affected area. A doctor-like AI will respond.")
+
+    with gr.Row():
+        audio_input = gr.Audio(sources=["microphone"], type="filepath", label="🎤 Speak your symptoms")
+        image_input = gr.Image(type="filepath", label="🖼️ Upload affected area (optional)")
+
+    with gr.Row():
+        submit_btn = gr.Button("🔍 Submit")
+        clear_btn = gr.Button("🧹 Clear")
+
+    transcript_output = gr.Textbox(label="📝 Transcribed Text")
+    response_output = gr.Textbox(label="🧑‍⚕️ Doctor's Response")
+    voice_output = gr.Audio(label="🔊 Voice of the Doctor")
+
+    # Button functionality
+    submit_btn.click(
+        fn=process_inputs,
+        inputs=[audio_input, image_input],
+        outputs=[transcript_output, response_output, voice_output]
+    )
+
+    clear_btn.click(
+        fn=lambda: ("", "", None),
+        inputs=[],
+        outputs=[transcript_output, response_output, voice_output]
+    )
+
+# === Launch Gradio App ===
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 7860))
-    iface.launch(server_name="0.0.0.0", server_port=port)
+    iface.launch(
+        server_name="0.0.0.0",
+        server_port=int(os.environ.get("PORT", 7860)),
+        show_error=True
+    )
